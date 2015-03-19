@@ -6,6 +6,14 @@ $(document).ready( function() {
 		var tags = $(this).find("input[name='tags']").val();
 		getUnanswered(tags);
 	});
+
+	$('.inspiration-getter').submit( function(event){
+		// zero out results if previous search has run
+		$('.results').html('');
+		// get the value of the tags the user submitted
+		var tag = $(this).find("input[name='answerers']").val();
+		getTopAnswerers(tag);
+	});
 });
 
 // this function takes the question object returned by StackOverflow 
@@ -42,6 +50,28 @@ var showQuestion = function(question) {
 };
 
 
+var showAnswerer = function(answerer) {
+
+	// clone our result template code
+	var result = $('.templates .answerer').clone();
+
+	// Set the answerer properties in result
+	var answererElem = result.find('.top-answerer a');
+	answererElem.attr('href', answerer.user.link);
+	answererElem.text(answerer.user.display_name);
+
+	// set the date asked property in result
+	var reputation = result.find('.reputation');
+	reputation.text(answerer.user.reputation);
+
+	// set the #views for answerer property in result
+	var score = result.find('.score');
+	score.text(answerer.score);
+
+	return result;
+};
+
+
 // this function takes the results object from StackOverflow
 // and creates info about search results to be appended to DOM
 var showSearchResults = function(query, resultNum) {
@@ -59,13 +89,13 @@ var showError = function(error){
 // takes a string of semi-colon separated tags to be searched
 // for on StackOverflow
 var getUnanswered = function(tags) {
-	
+
 	// the parameters we need to pass in our request to StackOverflow's API
 	var request = {tagged: tags,
 								site: 'stackoverflow',
 								order: 'desc',
 								sort: 'creation'};
-	
+
 	var result = $.ajax({
 		url: "http://api.stackexchange.com/2.2/questions/unanswered",
 		data: request,
@@ -88,5 +118,30 @@ var getUnanswered = function(tags) {
 	});
 };
 
+// get the top answerers
+var getTopAnswerers = function(tag) {
 
+	// the parameters we need to pass in our request to StackOverflow's API
+	var request = {site: 'stackoverflow'};
+
+	var result = $.ajax({
+		url: "http://api.stackexchange.com/2.2/tags/"+tag+"/top-answerers/all_time",
+		data: request,
+		dataType: "jsonp",
+		type: "GET",
+		})
+	.done(function(result) {
+		var searchResults = showSearchResults(tag, result.items.length);
+		$('.search-results').html(searchResults);
+
+		$.each(result.items, function(i, item) {
+			var question = showAnswerer(item);
+			$('.results').append(question);
+		});
+	})
+	.fail(function(jqXHR, error, errorThrown){
+		var errorElem = showError(error);
+		$('.search-results').append(errorElem);
+	});
+};
 
